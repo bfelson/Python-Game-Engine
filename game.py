@@ -1,6 +1,6 @@
 import numpy as np
 import pygame
-import sys, os
+from sys import exit
 
 from pygame.locals import *
 from pygame.color import THECOLORS
@@ -24,7 +24,7 @@ backgroundColor = (255,255,255)
 display_surface.fill(backgroundColor)
 
 #initializing variables
-fps_limit = 60
+fps_limit = 120
 time = 0.0
 
 #getting to main loop
@@ -35,10 +35,17 @@ left_clicking = False
 middle_clicking = False
 right_clicking = False
 
+maxSize = 25
+
 #draw variables
 shape = 'circle'
 size = 10
 currentColor = 'blue'
+
+
+def rainbow():
+    for color in THECOLORS:
+        yield THECOLORS[color]
 
 def draw():
     if shape == 'circle':
@@ -49,18 +56,24 @@ def draw():
         points = [(mouseX-size/2, mouseY+size/2), (mouseX, mouseY-size/2), (mouseX+size/2, mouseY+size/2)]
         pygame.draw.polygon(display_surface, currentColor, points)
     
-def drawButtons():
+def colorButton(color, number):
+    print(color)
     global currentColor
-    def colorButton(color, number):
-        global currentColor
-        y_location = 10+number*75
-        baseButton = pygame.Rect(5, y_location-5, 60, 60)
-        pygame.draw.rect(display_surface, 'gray', baseButton)
-        pygame.draw.rect(display_surface, 'black', pygame.Rect(10, y_location, 50, 50))
-        pygame.draw.circle(display_surface, color, (35, y_location+25), 20, 0)
+    y_location = 10+number*75
+    baseButton = pygame.Rect(5, y_location-5, 60, 60)
+    pygame.draw.rect(display_surface, 'gray', baseButton)
+    pygame.draw.rect(display_surface, 'black', pygame.Rect(10, y_location, 50, 50))
+    pygame.draw.circle(display_surface, color, (35, y_location+25), 20, 0)
 
-        if baseButton.collidepoint(mouse_position) and left_clicking:
-            currentColor = color
+    if baseButton.collidepoint(mouse_position) and left_clicking:
+        currentColor = color
+
+
+rainbowColor = (0,0,0)
+UPDATE_RAINBOW_EVENT = pygame.USEREVENT
+
+def drawButtons():
+    global currentColor, rainbowColor, UPDATE_RAINBOW_EVENT
 
     colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple']
     for i in range(len(colors)):
@@ -89,7 +102,14 @@ def drawButtons():
     shapes = ['circle', 'rect', 'triangle']
     for i in range(len(shapes)):
         shapeButton(shapes[i], i)
+
+    rainbowColor = rainbow()
+    UPDATE_RAINBOW_EVENT = pygame.USEREVENT + 1
+    pygame.time.set_timer(UPDATE_RAINBOW_EVENT, 1)
+
         
+
+#knob variables
 slider_width = WIDTH/2
 slider_height = HEIGHT/10
 slider_x = WIDTH/4
@@ -108,11 +128,11 @@ def drawSlider():
 
     #fake line for slider
     line_rect = pygame.Rect(slider_x+25, slider_y+slider_height/2, slider_width-50, 4)
-    pygame.draw.rect(display_surface, 'black', line_rect)
+    pygame.draw.rect(display_surface, 'white', line_rect)
 
     #knob
     knobPosition = (knobX, knobY)
-    pygame.draw.circle(display_surface, 'white', knobPosition, knobSize, 0)
+    pygame.draw.circle(display_surface, 'black', knobPosition, knobSize, 0)
 
     knobHitbox = pygame.Rect(knobX-slider_height/3, slider_y+knobSize/2, knobSize*2.1, knobSize*2.1)
     #pygame.draw.rect(display_surface, 'red', knobHitbox)
@@ -123,7 +143,7 @@ def drawSlider():
     knobX = min(max(knobX, slider_x+knobSize/2), slider_x+slider_width-knobSize/2)
 
     #adjust size
-    size = int((knobX - (slider_x+knobSize/2)) * (100 / (slider_width-knobSize)))
+    size = int((knobX - (slider_x+knobSize/2)) * (maxSize / (slider_width-knobSize)))
 
 while running:
     for event in pygame.event.get():
@@ -150,10 +170,16 @@ while running:
             elif event.button == 3:
                 right_clicking = False
 
+        if event.type == UPDATE_RAINBOW_EVENT:
+            print("Updating!")
+            current_rainbow_color = next(rainbowColor)
+            colorButton(current_rainbow_color, 6)
+
+
     mouse_position = pygame.mouse.get_pos()
     mouseX, mouseY = mouse_position
-    #draw stuff
 
+    #draw stuff
     drawButtons()
     drawSlider()
 
