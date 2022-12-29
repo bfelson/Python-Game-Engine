@@ -42,11 +42,6 @@ shape = 'circle'
 size = 10
 currentColor = 'blue'
 
-
-def rainbow():
-    for color in THECOLORS:
-        yield THECOLORS[color]
-
 def draw():
     if shape == 'circle':
         pygame.draw.circle(display_surface, currentColor, mouse_position, size, 0)
@@ -57,7 +52,6 @@ def draw():
         pygame.draw.polygon(display_surface, currentColor, points)
     
 def colorButton(color, number):
-    print(color)
     global currentColor
     y_location = 10+number*75
     baseButton = pygame.Rect(5, y_location-5, 60, 60)
@@ -67,10 +61,6 @@ def colorButton(color, number):
 
     if baseButton.collidepoint(mouse_position) and left_clicking:
         currentColor = color
-
-
-rainbowColor = (0,0,0)
-UPDATE_RAINBOW_EVENT = pygame.USEREVENT
 
 def drawButtons():
     global currentColor, rainbowColor, UPDATE_RAINBOW_EVENT
@@ -101,13 +91,7 @@ def drawButtons():
     
     shapes = ['circle', 'rect', 'triangle']
     for i in range(len(shapes)):
-        shapeButton(shapes[i], i)
-
-    rainbowColor = rainbow()
-    UPDATE_RAINBOW_EVENT = pygame.USEREVENT + 1
-    pygame.time.set_timer(UPDATE_RAINBOW_EVENT, 1)
-
-        
+        shapeButton(shapes[i], i)  
 
 #knob variables
 slider_width = WIDTH/2
@@ -146,6 +130,9 @@ def drawSlider():
     size = int((knobX - (slider_x+knobSize/2)) * (maxSize / (slider_width-knobSize)))
 
 while running:
+    mouse_position = pygame.mouse.get_pos()
+    mouseX, mouseY = mouse_position
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -170,15 +157,6 @@ while running:
             elif event.button == 3:
                 right_clicking = False
 
-        if event.type == UPDATE_RAINBOW_EVENT:
-            print("Updating!")
-            current_rainbow_color = next(rainbowColor)
-            colorButton(current_rainbow_color, 6)
-
-
-    mouse_position = pygame.mouse.get_pos()
-    mouseX, mouseY = mouse_position
-
     #draw stuff
     drawButtons()
     drawSlider()
@@ -186,4 +164,5 @@ while running:
     if left_clicking and mouseX > 60+size and mouseX < WIDTH-60 and mouseY < HEIGHT-100:
         draw()
 
+    clock.tick(fps_limit)
     pygame.display.update()
