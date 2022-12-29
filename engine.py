@@ -16,8 +16,10 @@ clock = pygame.time.Clock()
 fps_limit = 60
 
 backgroundColor = (255,255,255)
+objectList = []
 
 class PhysicsObject():
+    global objectList
 
     def convert(self, measurement):
         return measurement*self.conversion_factor
@@ -34,6 +36,7 @@ class PhysicsObject():
         self.acceleration = (self.convert(acceleration[0]), self.convert(acceleration[1]))
         self.max_velocity = (self.convert(max_velocity[0]), self.convert(max_velocity[1]))
         self.color = (255,0,0)
+        self.objectRect = pygame.Rect(self.x, self.y, self.width, self.height)
         
     def update(self, dt):
         #updating velocity
@@ -65,31 +68,51 @@ class PhysicsObject():
             self.y = screenHeight - self.height
             self.velocity = (self.velocity[0], -self.velocity[1])
 
-        print("Position: (", self.x, ", ", self.y, ") -- Velocity: ", self.velocity)
-
-
+        self.detectCollisions()
 
     def draw(self):
-        objectRect = pygame.Rect(self.x, self.y, self.width, self.height)
-        pygame.draw.rect(display_surface, self.color, objectRect, 0, 1)
+        self.objectRect = pygame.Rect(self.x, self.y, self.width, self.height)
+        pygame.draw.rect(display_surface, self.color, self.objectRect, 0, 1)
 
     def set_color(self, color):
         self.color = color
+
+    def detectCollisions(self):
+        for object in objectList:
+            if self.objectRect.colliderect(object.objectRect):
+                self.collision(object)
+        
+    def collision(self, object2):
+        m1 = self.mass
+        m2 = object2.mass
+        v1ox = self.velocity[0]
+        v1oy = self.velocity[1]
+        v2ox = object2.velocity[0]
+        v2oy = object2.velocity[1]
+
+        #head on collision
+        if (v1oy == 0 and v2oy == 0) or (v1ox == 0 and v2ox == 0):
+            vxf = ((m1-m2)/(m1+m2))*v1ox + (2*m1/(m1+m2))*v2ox
+            vyf = ((m1-m2)/(m1+m2))*v1oy + (2*m1/(m1+m2))*v2oy
+
+            self.velocity = (vxf, vyf)
 
 
 gravity = (0, 0)
 
 #input parameters in SI units, class will handle conversion
-testObject1 = PhysicsObject(100,             300, 1, 1, 5,  (1,-1), gravity, (10, 10))
-testObject2 = PhysicsObject(screenWidth-100, 300, 1, 1, 10, (-1, 0), gravity, (10,10))
+
+testObject1 = PhysicsObject(100,             300, 1, 1, 1,  (3,0), gravity, (10, 10))
+testObject2 = PhysicsObject(screenWidth-100, 275, 2, 2, 100, (-0.5, 0), gravity, (10,10))
 
 testObject2.set_color((0,255,0))
 
+objectList = [testObject1, testObject2]
 
 running = True
 #main game loop
 while running:
-    time_scale =  1e-2
+    time_scale =  1e-3
     dt = clock.tick(fps_limit) * time_scale
 
     for event in pygame.event.get():
