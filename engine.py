@@ -22,13 +22,13 @@ class PhysicsObject():
     global objectList
 
     def convert(self, measurement):
-        return measurement*self.conversion_factor
+        return int(measurement)*self.conversion_factor
 
     def __init__(self, x, y, width, height, mass, velocity, acceleration, max_velocity):
         self.conversion_factor = 50 #meaning 50 px = 1m
 
-        self.x = x
-        self.y = y
+        self.x = round(x)
+        self.y = round(y)
         self.width = self.convert(width)
         self.height = self.convert(height)
         self.mass = mass
@@ -37,19 +37,20 @@ class PhysicsObject():
         self.max_velocity = (self.convert(max_velocity[0]), self.convert(max_velocity[1]))
         self.color = (255,0,0)
         self.objectRect = pygame.Rect(self.x, self.y, self.width, self.height)
+        self.canCollide = True
         
     def update(self, dt):
         #updating velocity
-        self.velocity = (self.velocity[0] + self.acceleration[0] * dt,
-                         self.velocity[1] + self.acceleration[1] * dt)
+        self.velocity = (int(self.velocity[0] + self.acceleration[0] * dt),
+                         int(self.velocity[1] + self.acceleration[1] * dt))
         
         #ensuring velocity doesn't go past maximum
         self.velocity = (min(self.velocity[0], self.max_velocity[0]),
                          min(self.velocity[1], self.max_velocity[1]))
 
         #updating position
-        self.x += self.velocity[0] * dt
-        self.y += self.velocity[1] * dt
+        self.x += int(self.velocity[0] * dt)
+        self.y += int(self.velocity[1] * dt)
 
         #checking that object won't go off screen
         screenWidth, screenHeight = display_surface.get_size()
@@ -68,7 +69,8 @@ class PhysicsObject():
             self.y = screenHeight - self.height
             self.velocity = (self.velocity[0], -self.velocity[1])
 
-        self.detectCollisions()
+        self.objectRect = pygame.Rect(self.x, self.y, self.width, self.height)
+        self.checkPixels()
 
     def draw(self):
         self.objectRect = pygame.Rect(self.x, self.y, self.width, self.height)
@@ -77,33 +79,50 @@ class PhysicsObject():
     def set_color(self, color):
         self.color = color
 
-    def detectCollisions(self):
-        for object in objectList:
-            if self.objectRect.colliderect(object.objectRect):
-                self.collision(object)
-        
-    def collision(self, object2):
-        m1 = self.mass
-        m2 = object2.mass
-        v1ox = self.velocity[0]
-        v1oy = self.velocity[1]
-        v2ox = object2.velocity[0]
-        v2oy = object2.velocity[1]
+    def set_velocity(self, new_velocity):
+        self.velocity = new_velocity
 
-        #head on collision
-        if (v1oy == 0 and v2oy == 0) or (v1ox == 0 and v2ox == 0):
-            vxf = ((m1-m2)/(m1+m2))*v1ox + (2*m1/(m1+m2))*v2ox
-            vyf = ((m1-m2)/(m1+m2))*v1oy + (2*m1/(m1+m2))*v2oy
+    def change_collision_status(self):
+        self.canCollide = not self.canCollide
+        print("Can collide: ", self.canCollide)
 
-            self.velocity = (vxf, vyf)
+    def checkPixels(self):
+        self.x = round(self.x)
+        self.y = round(self.y)
 
+
+def collisionHandler():
+    global objectList
+    for object in objectList:
+        for object2 in objectList:
+            if object != object2 and object.objectRect.colliderect(object2.objectRect) and object.canCollide and object2.canCollide:
+                calculateCollision(object, object2)
+
+def calculateCollision(object1b, object2b):
+    object1b.canCollude = False
+    object2b.canCollude = False
+
+    m1 = object1b.mass
+    m2 = object2b.mass
+    v1x, v1y = object1b.velocity
+    v2x, v2y = object2b.velocity
+
+    v1xf = round(((m1-m2)/(m1+m2))*v1x + (2*m2/(m1+m2))*v2x)
+    v2xf = round((2*m1/(m1+m2)) * v1x + ((m2-m1)/(m1+m2))*v2x)
+
+    object1b.set_velocity((v1xf, v1y))
+    object2b.set_velocity((v2xf, v2y))
+
+    makeCollisions(object1b, object2b)
+
+def makeCollisions(object1a, object2a):
+    distance = np.sqrt((object1a.x-object2a.x)**2 + (object1a.y-object2a.y)**2)
 
 gravity = (0, 0)
 
 #input parameters in SI units, class will handle conversion
-
-testObject1 = PhysicsObject(100,             300, 1, 1, 1,  (3,0), gravity, (10, 10))
-testObject2 = PhysicsObject(screenWidth-100, 275, 2, 2, 100, (-0.5, 0), gravity, (10,10))
+testObject1 = PhysicsObject(100,             300, 1, 1, 1,  (3,0), gravity, (1000, 1000))
+testObject2 = PhysicsObject(screenWidth-100, 275, 2, 2, 100, (-3, 0), gravity, (1000,1000))
 
 testObject2.set_color((0,255,0))
 
@@ -122,14 +141,14 @@ while running:
 
         elif event.type == pygame.VIDEORESIZE:
             display_surface = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
-
+    collisionHandler()
     testObject1.update(dt)
     testObject2.update(dt)
     display_surface.fill(backgroundColor)
     testObject1.draw()
     testObject2.draw()
     
-    # pygame.time.delay(int(1000/fps_limit))
+    pygame.time.delay(int(1000/fps_limit))
     pygame.display.flip()
 
 pygame.quit()
